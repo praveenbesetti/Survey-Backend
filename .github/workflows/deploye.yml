@@ -15,30 +15,27 @@ jobs:
           username: ${{ secrets.GCP_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
           script: |
+            # Define exact paths
+            NODE_PATH="/home/praveenbesetti09/.nvm/versions/node/v24.14.0/bin"
             PROJECT_DIR="/var/www/backend"
 
-            # 1. Directory and Git Setup
-            sudo mkdir -p $PROJECT_DIR
-            sudo chown -R $USER:$USER $PROJECT_DIR
+            # 1. Update Permissions and Git
+            sudo chown -R praveenbesetti09:praveenbesetti09 $PROJECT_DIR
             git config --global --add safe.directory $PROJECT_DIR
 
-            # 2. Update Code
-            if [ -d "$PROJECT_DIR/.git" ]; then
-              cd $PROJECT_DIR && git pull origin main
-            else
-              git clone https://github.com/${{ github.repository }} $PROJECT_DIR
-              cd $PROJECT_DIR
-            fi
+            # 2. Pull latest code
+            cd $PROJECT_DIR && git pull origin main
 
-            # 3. Inject .env from Secrets
+            # 3. Create .env file
             echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
 
-            # 4. Install & Restart (Standard commands now work thanks to the links)
-            npm install --production
-            
-            pm2 delete backend-api || true
-            pm2 start server.js --name "backend-api"
-            pm2 save
-            
-            # 5. Reload Nginx
-            sudo systemctl reload nginx
+            # 4. Install Dependencies (Forced via Absolute Path + Sudo)
+            sudo $NODE_PATH/npm install --production
+
+            # 5. PM2 Restart (Forced via Absolute Path + Sudo)
+            sudo $NODE_PATH/pm2 delete backend-api || true
+            sudo $NODE_PATH/pm2 start server.js --name "backend-api"
+            sudo $NODE_BIN/pm2 save
+
+            # 6. Restart Nginx
+            sudo systemctl restart nginx
