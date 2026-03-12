@@ -15,15 +15,14 @@ jobs:
           username: ${{ secrets.GCP_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
           script: |
-            NODE_BIN="/home/praveenbesetti09/.nvm/versions/node/v24.14.0/bin"
             PROJECT_DIR="/var/www/backend"
 
-            # 1. Ensure the project directory is ready
+            # 1. Directory and Git Setup
             sudo mkdir -p $PROJECT_DIR
             sudo chown -R $USER:$USER $PROJECT_DIR
             git config --global --add safe.directory $PROJECT_DIR
 
-            # 2. Update code
+            # 2. Update Code
             if [ -d "$PROJECT_DIR/.git" ]; then
               cd $PROJECT_DIR && git pull origin main
             else
@@ -31,16 +30,15 @@ jobs:
               cd $PROJECT_DIR
             fi
 
-            # 3. Setup Environment
+            # 3. Inject .env from Secrets
             echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
 
-            # 4. Use absolute paths to run commands
-            $NODE_BIN/npm install --production
+            # 4. Install & Restart (Standard commands now work thanks to the links)
+            npm install --production
             
-            # Fresh start for PM2
-            $NODE_BIN/pm2 delete backend-api || true
-            $NODE_BIN/pm2 start server.js --name "backend-api"
-            $NODE_BIN/pm2 save
+            pm2 delete backend-api || true
+            pm2 start server.js --name "backend-api"
+            pm2 save
             
-            # Reload Nginx
+            # 5. Reload Nginx
             sudo systemctl reload nginx
