@@ -1,0 +1,35 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [ main ] # Runs when you push to main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GCP VM
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.GCP_IP }}
+          username: ${{ secrets.GCP_USER }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          script: |
+            # Create directory if it doesn't exist
+            sudo mkdir -p /var/www/backend
+            sudo chown -R ${{ secrets.GCP_USER }}:${{ secrets.GCP_USER }} /var/www/backend
+            
+            # Clone or Update Repo
+            if [ -d "/var/www/backend/.git" ]; then
+              cd /var/www/backend && git pull origin main
+            else
+              git clone https://github.com/${{ github.repository }} /var/www/backend
+              cd /var/www/backend
+            fi
+
+            # Sync .env file
+            echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+
+            # Build and Restart
+            npm install --production
+            pm2 restart backend-api || pm2 start server.js --name "backend-api"
