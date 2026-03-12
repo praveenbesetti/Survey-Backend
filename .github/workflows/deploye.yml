@@ -2,7 +2,7 @@ name: Backend CI/CD
 
 on:
   push:
-    branches: [ main ] # Runs when you push to main
+    branches: [ main ]
 
 jobs:
   deploy:
@@ -15,15 +15,35 @@ jobs:
           username: ${{ secrets.GCP_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
           script: |
-            cd /var/www/backend
-            git pull origin main
+            # 1. Define Paths to avoid errors
+            NODE_BIN="/home/praveenbesetti09/.nvm/versions/node/v24.14.0/bin"
+            PROJECT_DIR="/var/www/backend"
 
-            # Create the .env file from GitHub Secrets
+            # 2. Ensure directory exists and has correct permissions
+            sudo mkdir -p $PROJECT_DIR
+            sudo chown -R praveenbesetti09:praveenbesetti09 $PROJECT_DIR
+
+            # 3. Clone or Update logic
+            if [ -d "$PROJECT_DIR/.git" ]; then
+              cd $PROJECT_DIR && git pull origin main
+            else
+              git clone https://github.com/${{ github.repository }} $PROJECT_DIR
+              cd $PROJECT_DIR
+            fi
+
+            # 4. Sync Environment Variables
             echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
 
-            # Now these commands will be found automatically
-            npm install --production
-            pm2 restart backend-api || pm2 start server.js --name "backend-api"
+            # 5. Install Dependencies
+            $NODE_BIN/npm install --production
+
+            # 6. Stop old process and start new to ensure a fresh state
+            # We use 'delete' and 'start' to avoid port-in-use or name-clash errors
+            $NODE_BIN/pm2 delete backend-api || true
+            $NODE_BIN/pm2 start server.js --name "backend-api"
             
-            # Optional: ensure nginx is fresh
+            # 7. Make sure PM2 starts on VM reboot
+            $NODE_BIN/pm2 save
+
+            # 8. Final Nginx Reload
             sudo systemctl reload nginx
