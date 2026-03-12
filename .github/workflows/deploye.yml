@@ -15,26 +15,15 @@ jobs:
           username: ${{ secrets.GCP_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
           script: |
-            # 1. Load NVM / Node.js environment
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            
-            # 2. Setup Directory
-            sudo mkdir -p /var/www/backend
-            sudo chown -R $USER:$USER /var/www/backend
-            
-            # 3. Clone or Update
-            if [ -d "/var/www/backend/.git" ]; then
-              cd /var/www/backend && git pull origin main
-            else
-              git clone https://github.com/${{ github.repository }} /var/www/backend
-              cd /var/www/backend
-            fi
+            cd /var/www/backend
+            git pull origin main
 
-            # 4. Install and Restart
+            # Create the .env file from GitHub Secrets
             echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+
+            # Now these commands will be found automatically
             npm install --production
-            
-            # Use the full path for pm2 if it still fails, or just:
             pm2 restart backend-api || pm2 start server.js --name "backend-api"
+            
+            # Optional: ensure nginx is fresh
             sudo systemctl reload nginx
