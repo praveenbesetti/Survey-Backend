@@ -92,18 +92,41 @@ export const initSurveyRoutes = (app) => {
         }
     });
 
-
     router.post("/form", async (req, res) => {
         try {
-            req.body.surveyId = generateRandomLetters(3) + "-" + crypto.randomInt(100000000, 999999999)
-            const survey = new Survey(req.body)
-            await survey.save()
-            res.status(201).json({ message: "Survey saved", surveyId: survey.surveyId })
+            const { village, mandalId } = req.body;
+
+            // 1. Generate Survey ID and save the survey
+            req.body.surveyId = generateRandomLetters(3) + "-" + crypto.randomInt(100000000, 999999999);
+            const survey = new Survey(req.body);
+            await survey.save();
+
+            // 2. Update the Village Count
+            // We find the village by name and mandalId to be 100% unique
+            const updatedVillage = await Village.findOneAndUpdate(
+                {
+                    name: { $regex: new RegExp(`^${village.trim()}$`, "i") },
+                    mandalId: mandalId
+                },
+                { $inc: { count: 1 } }, // This increments the count by 1
+                { new: true }
+            );
+
+            if (!updatedVillage) {
+                console.log(`⚠️ Survey saved, but Village count not updated (Village: ${village} not found)`);
+            }
+
+            res.status(201).json({
+                message: "Survey saved and count updated",
+                surveyId: survey.surveyId,
+                currentCount: updatedVillage?.count || 0
+            });
+
         } catch (err) {
-            console.error(err)
-            res.status(500).json(err)
+            console.error("Survey Submission Error:", err);
+            res.status(500).json({ error: "Internal server error" });
         }
-    })
+    });
     router.post('/survey/submit', async (req, res) => {
         try {
             const { role, mandalId, village, username, password, token } = req.body;
