@@ -70,7 +70,7 @@ export const submitSurveyForm = async (req, res) => {
     try {
         const { village, mandalId } = req.body;
         req.body.surveyId = `${generateRandomLetters(3)}-${crypto.randomInt(100000000, 999999999)}`;
-        
+
         const survey = new Survey(req.body);
         await survey.save();
 
@@ -106,12 +106,12 @@ export const authenticateUser = async (req, res) => {
         if (role === 'subagent') {
             const newToken = crypto.randomBytes(3).toString('hex').toUpperCase();
             const result = await Village.findOneAndUpdate(
-                { 
-                    name: { $regex: new RegExp(`^${village.trim()}$`, "i") }, 
-                    mandalId, 
-                    "subagents.username": username, 
-                    "subagents.password": password, 
-                    "subagents.token": token 
+                {
+                    name: { $regex: new RegExp(`^${village.trim()}$`, "i") },
+                    mandalId,
+                    "subagents.username": username,
+                    "subagents.password": password,
+                    "subagents.token": token
                 },
                 { $set: { "subagents.$.token": newToken } },
                 { new: true }
@@ -138,48 +138,62 @@ export const authenticateUser = async (req, res) => {
 
 export const getSurveyData = async (req, res) => {
     try {
+
         const { district, mandal, village, page = 1, limit = 50 } = req.query;
+
         let filter = {};
-        if (district) filter.district = district;
-        if (mandal) filter.mandal = mandal;
-        if (village) filter.village = village;
 
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+        if (district) filter.districtName = { $regex: district, $options: "i" };
+        if (mandal) filter.MandalName = { $regex: mandal, $options: "i" };
+        if (village) filter.VillageName = { $regex: village, $options: "i" };
 
-        const [families, totalRecords, totalsAggregation] = await Promise.all([
-            Survey.find(filter).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
-            Survey.countDocuments(filter),
-            Survey.aggregate([
-                { $match: filter },
-                {
-                    $group: {
-                        _id: null,
-                        rice: { $sum: "$consumption.rice.value" },
-                        wheat: { $sum: "$consumption.wheat.value" },
-                        toorDal: { $sum: "$consumption.toorDal.value" },
-                        moongDal: { $sum: "$consumption.moongDal.value" },
-                        chanaDal: { $sum: "$consumption.chanaDal.value" },
-                        oil: { $sum: "$consumption.oil.value" },
-                        sugar: { $sum: "$consumption.sugar.value" },
-                        salt: { $sum: "$consumption.salt.value" },
-                        tea: { $sum: "$consumption.tea.value" },
-                        milk: { $sum: "$consumption.milk.value" },
-                        eggs: { $sum: "$consumption.eggs.value" },
-                        bathSoap: { $sum: "$consumption.bathSoap.value" },
-                        shampoo: { $sum: "$consumption.shampoo.value" },
-                        detergent: { $sum: "$consumption.detergent.value" },
-                        dishWash: { $sum: "$consumption.dishWash.value" },
-                        toothpaste: { $sum: "$consumption.toothpaste.value" }
-                    }
+        const skip = (page - 1) * limit;
+
+        const surveys = await Survey.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(Number(limit));
+
+        const totalRecords = await Survey.countDocuments(filter);
+
+        const totalsAggregation = await Survey.aggregate([
+            { $match: filter },
+
+            {
+                $group: {
+                    _id: null,
+
+                    rice: { $sum: "$consumption.rice.value" },
+                    wheat: { $sum: "$consumption.wheat.value" },
+                    toorDal: { $sum: "$consumption.toorDal.value" },
+                    moongDal: { $sum: "$consumption.moongDal.value" },
+                    chanaDal: { $sum: "$consumption.chanaDal.value" },
+                    oil: { $sum: "$consumption.oil.value" },
+                    sugar: { $sum: "$consumption.sugar.value" },
+                    salt: { $sum: "$consumption.salt.value" },
+                    tea: { $sum: "$consumption.tea.value" },
+                    milk: { $sum: "$consumption.milk.value" },
+                    eggs: { $sum: "$consumption.eggs.value" },
+                    bathSoap: { $sum: "$consumption.bathSoap.value" },
+                    shampoo: { $sum: "$consumption.shampoo.value" },
+                    detergent: { $sum: "$consumption.detergent.value" },
+                    dishWash: { $sum: "$consumption.dishWash.value" },
+                    toothpaste: { $sum: "$consumption.toothpaste.value" }
                 }
-            ])
+            }
         ]);
 
+        const totals = totalsAggregation.length > 0 ? totalsAggregation[0] : {};
+
+        delete totals._id;
+
         res.json({
-            families,
-            totals: totalsAggregation[0] || {},
-            pagination: { totalRecords, currentPage: parseInt(page), totalPages: Math.ceil(totalRecords / limit) }
+            surveys,
+            totals,
+            totalPages: Math.ceil(totalRecords / limit),
+            totalSurveys: totalRecords
         });
+
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
