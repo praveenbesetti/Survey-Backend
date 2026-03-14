@@ -6,6 +6,7 @@ import Auth from './authRouter.js';
 import SurveyForm from './surveyFormRoute.js';
 import surveyData from './surveyDataRoute.js';
 
+import State from './stateRoute.js'
 const router = express.Router();
 
 router.use('/auth', Auth);
@@ -14,5 +15,5 @@ router.use('/mandals', Mandal);
 router.use('/villages', Village);
 router.use('/surveys', SurveyForm);
 router.use('/survey-data', surveyData);
-
+router.use('/states',State);
 export default router;

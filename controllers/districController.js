@@ -3,10 +3,11 @@ import { District } from '../models/DistrictSchema.js';
 const router = express.Router();
 
 
-export const getDistricts = async (req, res) => {
+export const getDistrictsByState = async (req, res) => {
     try {
-        const districts = await District.find({}, 'name').sort({ name: 1 }).lean();
-        res.json(districts);
+        const { stateId } = req.params;
+        const districts = await District.find({ stateId }).sort({ name: 1 });
+        res.json({ success: true, data: districts });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

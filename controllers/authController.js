@@ -18,6 +18,7 @@ export const authenticateUser = async (req, res) => {
 
         if (role === 'subagent') {
             const newToken = crypto.randomBytes(3).toString('hex').toUpperCase();
+
             const result = await Village.findOneAndUpdate(
                 {
                     name: { $regex: new RegExp(`^${village.trim()}$`, "i") },
@@ -28,18 +29,29 @@ export const authenticateUser = async (req, res) => {
                 },
                 { $set: { "subagents.$.token": newToken } },
                 { new: true }
-            ).populate({ path: 'mandalId', populate: { path: 'districtId' } });
+            ).populate({
+                path: 'mandalId',
+                populate: {
+                    path: 'districtId',
+                    // 🚀 DEEP POPULATE: This reaches the State collection
+                    populate: { path: 'stateId' }
+                }
+            });
 
             if (!result) return res.status(401).json({ error: "Invalid credentials." });
+
+            const currentAgent = result.subagents.find(agent => agent.username === username);
 
             return res.json({
                 success: true,
                 data: {
                     villageId: result._id,
                     villageName: result.name,
-                    SurveyorId: result.subagents.find(agent => agent.username === username).surveyorId,
+                    SurveyorId: currentAgent.surveyorId, // Returning the string ID
                     mandalName: result.mandalId?.name,
                     districtName: result.mandalId?.districtId?.name,
+                    // 📍 Accessing the State Name
+                    stateName: result.mandalId?.districtId?.stateId?.name || "N/A",
                     token: newToken
                 }
             });

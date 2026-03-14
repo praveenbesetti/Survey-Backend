@@ -1,6 +1,6 @@
 import express from 'express';
-import { getDistricts } from '../controllers/districController.js';
+import { getDistrictsByState } from '../controllers/districController.js';
 
 const router = express.Router();
-router.get('/', getDistricts);
+router.get('/state/:stateId', getDistrictsByState);
 export default router;
