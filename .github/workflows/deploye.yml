@@ -18,25 +18,36 @@ jobs:
             NODE_BIN="/home/praveenbesetti09/.nvm/versions/node/v24.14.0/bin"
             PROJECT_DIR="/var/www/backend"
 
-            # 1. Fix Permissions once and for all
+            # 1. Fix Permissions and Trust the Directory
+            # This prevents the "dubious ownership" error that stops git pull
             sudo chown -R praveenbesetti09:praveenbesetti09 $PROJECT_DIR
+            git config --global --add safe.directory $PROJECT_DIR
+            
             cd $PROJECT_DIR
 
-            # 2. Pull Code (No sudo here - let the owner do it)
-            git fetch origin main
+            # 2. Force Sync with GitHub
+            # 'fetch --all' and 'reset --hard' ensures the VM matches GitHub exactly
+            git fetch --all
             git reset --hard origin/main
             git clean -fd
 
-            # 3. Inject .env
-            echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+            # 3. Inject Environment Variables
+            # Using sudo tee ensures the file is written even if locked
+            echo "${{ secrets.ENV_FILE_CONTENT }}" | sudo tee .env > /dev/null
+            sudo chown praveenbesetti09:praveenbesetti09 .env
 
-            # 4. Fresh Install (Using your specific Node version)
+            # 4. Install Dependencies
             $NODE_BIN/npm install --production
 
-            # 5. PM2 Restart
-            $NODE_BIN/pm2 delete backend-api || true
-            $NODE_BIN/pm2 start server.js --name "backend-api"
+            # 5. PM2 Management
+            # We use 'restart' with '--update-env' to ensure the new code is loaded into RAM
+            # If the process doesn't exist, we start it.
+            $NODE_BIN/pm2 restart backend-api --update-env || $NODE_BIN/pm2 start server.js --name "backend-api"
             $NODE_BIN/pm2 save
 
-            # 6. Reload Nginx
+            # 6. Final System Reloads
             sudo systemctl reload nginx
+            
+            # 7. Verification (Check logs in GitHub Actions output)
+            echo "Current Commit:"
+            git log -1 --format="%h - %s"
