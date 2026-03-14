@@ -19,7 +19,7 @@ jobs:
             PROJECT_DIR="/var/www/backend"
 
             # 1. Fix Permissions once and for all
-            sudo chown -R $USER:$USER $PROJECT_DIR
+            sudo chown -R praveenbesetti09:praveenbesetti09 $PROJECT_DIR
             cd $PROJECT_DIR
 
             # 2. Pull Code (No sudo here - let the owner do it)
