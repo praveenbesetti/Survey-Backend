@@ -1,45 +1,61 @@
 import crypto from 'crypto';
 import { Village } from '../models/VillageSchema.js';
-import {Survey} from '../models/SurveySchema.js';
+import { Survey } from '../models/SurveySchema.js';
+import mongoose from 'mongoose';
+
 
 function generateRandomLetters(length) {
     return crypto.randomBytes(length).toString('hex').slice(0, length).toUpperCase();
 }
 
+
+
 export const submitSurveyForm = async (req, res) => {
     try {
-        const { village, mandalId, surveyorId } = req.body;
+        // 1. Extract IDs from the request body
+        const { villageId, surveyorId } = req.body;
 
+        // 2. Generate Survey ID and Save to 'surveys' collection
         req.body.surveyId = `${generateRandomLetters(3)}-${crypto.randomInt(100000000, 999999999)}`;
         const survey = new Survey(req.body);
         await survey.save();
 
+        // 3. Update the 'villages' collection directly using IDs
         const updatedVillage = await Village.findOneAndUpdate(
             { 
-                name: { $regex: new RegExp(`^${village.trim()}$`, "i") }, 
-                mandalId,
-                "subagents.surveyorId": surveyorId 
+                _id: new mongoose.Types.ObjectId(villageId), 
+                "subagents.surveyorId": surveyorId          
             },
             { 
-                $inc: { "subagents.$.count": 1 }    
+                $inc: { 
+                    "subagents.$.count": 1    
+                } 
             },
             { new: true }
         );
 
+        // 4. Check if the update worked
         if (!updatedVillage) {
-            return res.status(404).json({ error: "Surveyor not found in this village" });
+            console.log(`❌ Update failed: No village with ID ${villageId} found containing surveyor ${surveyorId}`);
+            return res.status(201).json({
+                success: true,
+                message: "Survey saved, but failed to update sub-agent count.",
+                surveyId: survey.surveyId
+            });
         }
 
-        // Find the specific agent's new count to send back to the frontend
+        // 5. Success Response with the fresh count
         const agentData = updatedVillage.subagents.find(a => a.surveyorId === surveyorId);
 
         res.status(201).json({
-            message: "Survey saved and agent count updated",
+            success: true,
+            message: "Survey saved and count updated",
             surveyId: survey.surveyId,
-            agentName: agentData?.name,
             agentCount: agentData?.count || 0
         });
+
     } catch (err) {
-        res.status(500).json({ error: "Internal server error" });
+        console.error("Submit Error:", err.message);
+        res.status(500).json({ error: "Internal server error: " + err.message });
     }
 };
