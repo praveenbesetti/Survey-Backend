@@ -40,6 +40,7 @@ jobs:
       # 5. SSH to VM: Pull the new image and restart containers
       # VM DEPLOYMENT
       # VM DEPLOYMENT
+      # 5. SSH to VM: Pull the new image and restart containers
       - name: 'SSH and Deploy'
         run: |
           gcloud compute ssh ${{ secrets.GCP_VM_NAME }} \
@@ -48,30 +49,29 @@ jobs:
             --command="
               PROJECT_DIR='/var/www/backend'
               
-              # 1. Fix Permissions first
               sudo mkdir -p \$PROJECT_DIR
               sudo chown -R \$USER:\$USER \$PROJECT_DIR
               cd \$PROJECT_DIR
 
-              # 2. Recreate host files (using 'sudo tee' to ensure write permission)
+              # 2. Recreate host files
               echo '${{ env.COMPOSE_B64 }}' | base64 -d | sudo tee docker-compose.yml > /dev/null
               echo '${{ env.NGINX_B64 }}' | base64 -d | sudo tee nginx.conf > /dev/null
               echo '${{ secrets.ENV_FILE_CONTENT }}' | sudo tee .env > /dev/null
 
-              # 3. Fix Docker Auth
-              gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
-
-              # 4. Pull and Restart (Using 'docker' directly)
-              # If 'docker compose' fails, we try 'docker-compose'
-              if docker compose version > /dev/null 2>&1; then
+              # 3. Authenticate Docker on the VM
               sudo gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
-                sudo docker compose pull
-                sudo docker compose up -d
+
+              # 4. PULL & RECREATE (The Fix)
+              if sudo docker compose version > /dev/null 2>&1; then
+                sudo docker compose pull backend-api
+                # --force-recreate ensures the container is replaced even if it looks the same
+                sudo docker compose up -d --force-recreate
               else
-                sudo docker-compose pull
-                sudo docker-compose up -d
+                sudo docker-compose pull backend-api
+                sudo docker-compose up -d --force-recreate
               fi
 
+              # Clean up old images to save disk space
               sudo docker image prune -f
-              echo '✅ Deployment successful!'
+              echo '✅ Deployment successful and container recreated!'
             "
