@@ -11,8 +11,8 @@ const app = express();
 
 
 app.use(cors({
-  origin: '*', 
-  credentials: true,
+  origin: 'http://35.244.242.193', 
+  credentials: false,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
