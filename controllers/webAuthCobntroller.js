@@ -179,55 +179,21 @@ export const resetPassword = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
+    // 1. Clear the specific "token" cookie used in your login
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: false, // Match your login settings
+      path: "/",
+      sameSite: "lax",
+    });
 
-    const { empId, timestamp, workAccumulated, breakAccumulated, isOnBreak } = req.body; // Date from frontend (e.g., "2026-02-27")
-    const logoutTime = new Date();
-
-    // 1. Find the existing attendance for today
-    const attendance = await Attendance.findOne({ empId, date: new Date().toISOString().split("T")[0] });
-
-
-    if (!attendance) {
-      return res.status(404).json({ success: false, message: "Attendance record not found" });
-    }
-
-    // 2. Set logout time
-    attendance.logoutTime = logoutTime;
-
-
-    // 4. Calculate Net Work Duration (Total - Breaks)
-    // totalBreakDuration is already stored in ms in your schema
-    const netWorkMs = (attendance.totalWorkDuration || 0) + (attendance.totalBreakDuration || 0);
-
-    // Convert to hours for status check
-    const netWorkHours = netWorkMs / (1000 * 60 * 60);
-
-    // 5. Apply Business Rules for Status
-    if (netWorkHours < 4) {
-      attendance.status = "Absent";
-    } else if (netWorkHours < 5) {
-      attendance.status = "Half-Day";
-    } else {
-      attendance.status = "Present";
-    }
-
-    // Optional: Update final work duration in schema
-    attendance.totalBreakDuration = attendance.totalBreakDuration + breakAccumulated;
-    attendance.isOnBreak = isOnBreak;
-    attendance.totalWorkDuration = attendance.totalWorkDuration + workAccumulated;
-
-
-    const dat = await attendance.save();
-    // 6. Clear Cookies
-    res.clearCookie("username");
-    res.clearCookie("department");
+    // 2. Clear any other session identifiers if they exist
     res.clearCookie("employee");
 
     return res.status(200).json({
       success: true,
-      message: `Logged out. Work Hours: ${netWorkHours.toFixed(2)}. Status: ${attendance.status}`,
+      message: "Employee session cleared successfully",
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
