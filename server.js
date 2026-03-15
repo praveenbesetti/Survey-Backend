@@ -9,7 +9,6 @@ dotenv.config();
 
 const app = express();
 
-app.set('trust proxy', 1);
 
 app.use(cors({
   origin: 'http://35.244.242.193', 
@@ -19,7 +18,6 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(cookieParser()); 
 
 connectDB();
 
