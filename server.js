@@ -2,14 +2,27 @@ import express from 'express';
 import { connectDB } from './db/connection.js';
 import Routes from './routes/index.js';
 import cors from 'cors';
+import cookieParser from 'cookie-parser'; // 1. Added cookie parser
+import dotenv from 'dotenv';
+
+dotenv.config(); // 2. Load env at the very top to fix JWT Secret error
+
 const app = express();
-app.use(express.json());
+
+// 3. Fixed CORS (Typo: hhtp -> http) and added credentials support
 app.use(cors({
-  origin: '*', 
+  origin: 'http://localhost:5173', 
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true // MANDATORY for cookies to work
 }));
+
+app.use(express.json());
+app.use(cookieParser()); // 4. Use cookie parser before routes
+
 connectDB();
+
 app.use('/api', Routes);
-const PORT = 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 HariyaliMart Server running on port ${PORT}`));
