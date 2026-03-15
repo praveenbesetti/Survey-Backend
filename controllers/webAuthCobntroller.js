@@ -53,14 +53,6 @@ export const login = async (req, res) => {
             { expiresIn: "1d" }
         );
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: false,
-            path: "/",
-            sameSite: "lax",
-            maxAge: 24 * 60 * 60 * 1000,
-        });
-
         return res.status(200).json({
             success: true,
             message: "Logged in successfully",
@@ -179,18 +171,8 @@ export const resetPassword = async (req, res) => {
 
 export const logout = async (req, res) => {
     try {
-        // 1. Clear the specific "token" cookie used in your login
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: false,  //  MUST be false because frontend is HTTP
-            sameSite: 'lax', //  MUST be 'lax' for HTTP cross-origin
-            path: "/",
-            domain: '35.244.242.193' // Try adding the specific IP here
-        });
-
-        // 2. Clear any other session identifiers if they exist
-        res.clearCookie("employee");
-
+       
+   
         return res.status(200).json({
             success: true,
             message: "Employee session cleared successfully",

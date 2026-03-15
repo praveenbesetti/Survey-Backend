@@ -2,23 +2,24 @@ import express from 'express';
 import { connectDB } from './db/connection.js';
 import Routes from './routes/index.js';
 import cors from 'cors';
-import cookieParser from 'cookie-parser'; // 1. Added cookie parser
+import cookieParser from 'cookie-parser'; 
 import dotenv from 'dotenv';
 
-dotenv.config(); // 2. Load env at the very top to fix JWT Secret error
+dotenv.config(); 
 
 const app = express();
 
-// 3. Fixed CORS (Typo: hhtp -> http) and added credentials support
+app.set('trust proxy', 1);
+
 app.use(cors({
-  origin: 'http://35.244.242.193', // No trailing slash!
+  origin: 'http://35.244.242.193', 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
-app.use(cookieParser()); // 4. Use cookie parser before routes
+app.use(cookieParser()); 
 
 connectDB();
 
