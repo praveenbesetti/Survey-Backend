@@ -11,10 +11,10 @@ const app = express();
 
 // 3. Fixed CORS (Typo: hhtp -> http) and added credentials support
 app.use(cors({
-  origin: 'http://35.244.242.193', 
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true // MANDATORY for cookies to work
+  origin: 'http://35.244.242.193', // No trailing slash!
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
