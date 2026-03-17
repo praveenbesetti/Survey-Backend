@@ -113,7 +113,7 @@ export const getGroupedSurveyData = async (req, res) => {
                         detergent: "$detergent",
                         dishWash: "$dishWash",
                         toothpaste: "$toothpaste",
-                        other: "$other"
+                       
                     },
 
                     familyType: 1,
